@@ -591,7 +591,6 @@ extern "C" mirror::Object* artQuickGetProxyThisObject(ArtMethod** sp)
     SHARED_REQUIRES(Locks::mutator_lock_) {
   return QuickArgumentVisitor::GetProxyThisObjectReference(sp)->AsMirrorPtr();
 }
-
 extern "C" StackReference<mirror::Object>* artQuickGetProxyThisObjectReference(ArtMethod** sp)
     SHARED_REQUIRES(Locks::mutator_lock_) {
   return QuickArgumentVisitor::GetProxyThisObjectReference(sp);

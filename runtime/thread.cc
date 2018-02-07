@@ -2778,7 +2778,7 @@ class ReferenceMapVisitor : public StackVisitor {
     if (!m->IsNative() && !m->IsRuntimeMethod() && !m->IsXposedHookedMethod() && (!m->IsRealProxyMethod() || m->IsConstructor())) {
       const OatQuickMethodHeader* method_header = GetCurrentOatQuickMethodHeader();
       DCHECK(method_header->IsOptimized());
-      auto* vreg_base = reinterpret_cast<StackReference<mirror::Object>*>(
+      StackReference<mirror::Object>* vreg_base = reinterpret_cast<StackReference<mirror::Object>*>(
           reinterpret_cast<uintptr_t>(cur_quick_frame));
       uintptr_t native_pc_offset = method_header->NativeQuickPcOffset(GetCurrentQuickFramePc());
       CodeInfo code_info = method_header->GetOptimizedCodeInfo();
@@ -2789,7 +2789,7 @@ class ReferenceMapVisitor : public StackVisitor {
       size_t number_of_bits = map.GetNumberOfStackMaskBits(encoding.stack_map_encoding);
       for (size_t i = 0; i < number_of_bits; ++i) {
         if (map.GetStackMaskBit(encoding.stack_map_encoding, i)) {
-          auto* ref_addr = vreg_base + i;
+          StackReference<mirror::Object>* ref_addr = vreg_base + i;
           mirror::Object* ref = ref_addr->AsMirrorPtr();
           if (ref != nullptr) {
             mirror::Object* new_ref = ref;
@@ -2811,7 +2811,7 @@ class ReferenceMapVisitor : public StackVisitor {
         }
       }
     } else if (!m->IsStatic() && !m->IsRuntimeMethod() && m->IsProxyOrHookedMethod()) {
-      auto* ref_addr = artQuickGetProxyThisObjectReference(cur_quick_frame);
+      StackReference<mirror::Object>* ref_addr = artQuickGetProxyThisObjectReference(cur_quick_frame);
       mirror::Object* ref = ref_addr->AsMirrorPtr();
       if (ref != nullptr) {
         mirror::Object* new_ref = ref;
