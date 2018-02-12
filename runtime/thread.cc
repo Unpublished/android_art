@@ -2678,7 +2678,7 @@ bool Thread::HoldsLock(mirror::Object* object) const {
   return object->GetLockOwnerThreadId() == GetThreadId();
 }
 
-extern "C" StackReference<mirror::Object>* artQuickGetProxyThisObjectReference(ArtMethod** sp)
+extern std::vector<StackReference<mirror::Object>*> GetProxyReferenceArguments(ArtMethod** sp)
     SHARED_REQUIRES(Locks::mutator_lock_);
 
 // RootVisitor parameters are: (const Object* obj, size_t vreg, const StackVisitor* visitor).
@@ -2724,7 +2724,7 @@ class ReferenceMapVisitor : public StackVisitor {
       }
     }
     // Mark lock count map required for structured locking checks.
-    shadow_frame->GetLockCountData().VisitMonitors(visitor_, -1, this);
+    shadow_frame->GetLockCountData().VisitMonitors(visitor_, /* vreg */ -1, this);
   }
 
  private:
@@ -2761,7 +2761,7 @@ class ReferenceMapVisitor : public StackVisitor {
         }
       }
       mirror::Object* new_ref = klass;
-      visitor_(&new_ref, -1, this);
+      visitor_(&new_ref, /* vreg */ -1, this);
       if (new_ref != klass) {
         method->CASDeclaringClass(klass, new_ref->AsClass());
       }
@@ -2811,13 +2811,17 @@ class ReferenceMapVisitor : public StackVisitor {
         }
       }
     } else if (!m->IsStatic() && !m->IsRuntimeMethod() && m->IsProxyOrHookedMethod()) {
-      StackReference<mirror::Object>* ref_addr = artQuickGetProxyThisObjectReference(cur_quick_frame);
-      mirror::Object* ref = ref_addr->AsMirrorPtr();
-      if (ref != nullptr) {
-        mirror::Object* new_ref = ref;
-        visitor_(&new_ref, -1, this);
-        if (ref != new_ref) {
-          ref_addr->Assign(new_ref);
+      // If this is a proxy method, visit its reference arguments.
+      std::vector<StackReference<mirror::Object>*> ref_addrs =
+          GetProxyReferenceArguments(cur_quick_frame);
+      for (StackReference<mirror::Object>* ref_addr : ref_addrs) {
+        mirror::Object* ref = ref_addr->AsMirrorPtr();
+        if (ref != nullptr) {
+          mirror::Object* new_ref = ref;
+          visitor_(&new_ref, /* vreg */ -1, this);
+          if (ref != new_ref) {
+            ref_addr->Assign(new_ref);
+          }
         }
       }
     }

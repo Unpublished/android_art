@@ -591,10 +591,6 @@ extern "C" mirror::Object* artQuickGetProxyThisObject(ArtMethod** sp)
     SHARED_REQUIRES(Locks::mutator_lock_) {
   return QuickArgumentVisitor::GetProxyThisObjectReference(sp)->AsMirrorPtr();
 }
-extern "C" StackReference<mirror::Object>* artQuickGetProxyThisObjectReference(ArtMethod** sp)
-    SHARED_REQUIRES(Locks::mutator_lock_) {
-  return QuickArgumentVisitor::GetProxyThisObjectReference(sp);
-}
 
 // Visits arguments on the stack placing them into the shadow frame.
 class BuildQuickShadowFrameVisitor FINAL : public QuickArgumentVisitor {
@@ -869,7 +865,8 @@ extern "C" uint64_t artQuickProxyInvokeHandler(
   std::vector<jvalue> args;
   uint32_t shorty_len = 0;
   const char* shorty = non_proxy_method->GetShorty(&shorty_len);
-  BuildQuickArgumentVisitor local_ref_visitor(sp, is_static, shorty, shorty_len, &soa, &args);
+  BuildQuickArgumentVisitor local_ref_visitor(
+      sp, is_static, shorty, shorty_len, &soa, &args);
 
   local_ref_visitor.VisitArguments();
   if (!is_static) {
@@ -899,6 +896,47 @@ extern "C" uint64_t artQuickProxyInvokeHandler(
   // Restore references which might have moved.
   local_ref_visitor.FixupReferences();
   return result.GetJ();
+}
+
+// Visitor returning all the reference arguments in a Quick stack frame.
+class GetQuickReferenceArgumentsVisitor FINAL : public QuickArgumentVisitor {
+ public:
+  GetQuickReferenceArgumentsVisitor(ArtMethod** sp,
+                                    bool is_static,
+                                    const char* shorty,
+                                    uint32_t shorty_len)
+      : QuickArgumentVisitor(sp, is_static, shorty, shorty_len) {}
+
+  void Visit() SHARED_REQUIRES(Locks::mutator_lock_) OVERRIDE {
+    Primitive::Type type = GetParamPrimitiveType();
+    if (type == Primitive::kPrimNot) {
+      StackReference<mirror::Object>* ref_arg =
+          reinterpret_cast<StackReference<mirror::Object>*>(GetParamAddress());
+      ref_args_.push_back(ref_arg);
+    }
+  }
+
+  std::vector<StackReference<mirror::Object>*> GetReferenceArguments() {
+    return ref_args_;
+  }
+
+ private:
+  // The reference arguments.
+  std::vector<StackReference<mirror::Object>*> ref_args_;
+
+  DISALLOW_COPY_AND_ASSIGN(GetQuickReferenceArgumentsVisitor);
+};
+
+// Returning all reference arguments in Quick stack frame at address `sp`.
+std::vector<StackReference<mirror::Object>*> GetProxyReferenceArguments(ArtMethod** sp)
+    SHARED_REQUIRES(Locks::mutator_lock_) {
+  ArtMethod* proxy_method = *sp;
+  uint32_t shorty_len = 0;
+  const char* shorty = proxy_method->GetInterfaceMethodIfProxy(sizeof(void*))->GetShorty(&shorty_len);
+  GetQuickReferenceArgumentsVisitor ref_args_visitor(sp, /* is_static */ false, shorty, shorty_len);
+  ref_args_visitor.VisitArguments();
+  std::vector<StackReference<mirror::Object>*> ref_args = ref_args_visitor.GetReferenceArguments();
+  return ref_args;
 }
 
 // Read object references held in arguments from quick frames and place in a JNI local references,
