@@ -43,6 +43,7 @@ enum MethodCompilationStat {
   kNotCompiledThrowCatchLoop,
   kNotCompiledAmbiguousArrayOp,
   kNotCompiledHugeMethod,
+  kNotCompiledIrreducibleAndStringInit,
   kNotCompiledLargeMethodNoBranches,
   kNotCompiledMalformedOpcode,
   kNotCompiledNoCodegen,
@@ -121,6 +122,7 @@ class OptimizingCompilerStats {
       case kNotCompiledThrowCatchLoop : name = "NotCompiledThrowCatchLoop"; break;
       case kNotCompiledAmbiguousArrayOp : name = "NotCompiledAmbiguousArrayOp"; break;
       case kNotCompiledHugeMethod : name = "NotCompiledHugeMethod"; break;
+      case kNotCompiledIrreducibleAndStringInit : name = "NotCompiledIrreducibleAndStringInit"; break;
       case kNotCompiledLargeMethodNoBranches : name = "NotCompiledLargeMethodNoBranches"; break;
       case kNotCompiledMalformedOpcode : name = "NotCompiledMalformedOpcode"; break;
       case kNotCompiledNoCodegen : name = "NotCompiledNoCodegen"; break;
